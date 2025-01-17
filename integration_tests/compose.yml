@@ -1,0 +1,45 @@
+services:
+    web:
+      extends:
+        file: ../app/compose.yml
+        service: web
+      container_name: django_server_test
+      env_file:
+        - ../integration_tests/.env
+      ports: !reset []
+      volumes: !reset []
+    postgres:
+      extends:
+        file: ../app/compose.yml
+        service: postgres
+      container_name: postgres_test
+      volumes: !reset []
+      ports: !reset []
+    rabbitmq:
+      extends:
+        file: ../app/compose.yml
+        service: rabbitmq
+      container_name: rabbitmq_test
+      volumes: !reset []
+      ports: !reset []
+    outbox_publisher:
+      extends:
+        file: ../app/compose.yml
+        service: outbox_publisher
+      container_name: outbox_publisher_test
+      volumes: !reset []
+    leads_worker:    
+      extends:
+        file: ../app/compose.yml
+        service: leads_worker   
+      container_name: leads_worker_test
+      volumes: !reset []
+    tests:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      command: >
+        sh -c "pytest main.py"
+      depends_on:
+        web:
+          condition: service_started

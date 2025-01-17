@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "django-template"
+version = "0.1.0"
+description = ""
+authors = ["brenosss <brenoe133@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+Django = "^5.1.2"
+celery = "^5.4.0"
+redis = "^5.1.1"
+requests = "^2.32.3"
+flower = "^2.0.1"
+psycopg = "^3.2.3"
+django-celery-beat = "^2.7.0"
+django-outbox-pattern = "^2.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
