@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "leads",
     "outbox",
     "django_celery_beat",
+    "claims",
     "django_outbox_pattern"
 ]
 
@@ -144,6 +145,10 @@ JAIMINHO_CONFIG = {
 
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULE = {
+    "add-every-30-seconds": {
+        "task": "claims.tasks.publish_outbox_messages",
+        "schedule": 30.0
+    },
     "add-every-30-seconds": {
         "task": "leads.tasks.publish_outbox_messages",
         "schedule": 30.0
