@@ -150,6 +150,10 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 30.0
     },
     "add-every-30-seconds": {
+        "task": "claims.tasks.publish_outbox_messages",
+        "schedule": 30.0
+    },
+    "add-every-30-seconds": {
         "task": "leads.tasks.publish_outbox_messages",
         "schedule": 30.0
     }
