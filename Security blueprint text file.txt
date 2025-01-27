@@ -1,0 +1,262 @@
+# Code and Design Level Security Considerations
+ 
+## 1. Input Validation and Data Handling
+### Input Validation
+- **Parameter Validation**
+  ```typescript
+  // Bad
+  function processUserData(userInput: string) {
+    database.query(`SELECT * FROM users WHERE id = ${userInput}`);
+  }
+ 
+  // Good
+  function processUserData(userInput: string) {
+    if (!isValidUserId(userInput)) {
+      throw new ValidationError('Invalid user ID format');
+    }
+    database.query('SELECT * FROM users WHERE id = ?', [userInput]);
+  }
+  ```
+ 
+### Data Sanitization
+- All inputs must be validated and sanitized before processing
+- Implement strict type checking
+- Use parameterized queries for database operations
+- Sanitize HTML/XML content
+- Validate file uploads (type, size, content)
+ 
+### Output Encoding
+- Context-specific encoding (HTML, JavaScript, SQL, etc.)
+- Character encoding standardization
+- Prevention of data leakage in error messages
+- Safe handling of special characters
+ 
+## 2. Authentication Implementation
+### Secure Password Handling
+```typescript
+// Bad
+class UserService {
+  async storePassword(password: string) {
+    this.password = password; // Plain text storage
+  }
+}
+ 
+// Good
+class UserService {
+  async storePassword(password: string) {
+    const salt = await crypto.randomBytes(16);
+    const hash = await argon2.hash(password, { salt });
+    this.passwordHash = hash;
+  }
+}
+```
+ 
+### Session Management
+```typescript
+// Bad
+const sessionToken = Math.random().toString();
+ 
+// Good
+const sessionToken = crypto.randomBytes(32).toString('hex');
+session.options = {
+  secure: true,
+  httpOnly: true,
+  sameSite: 'strict',
+  maxAge: 3600000 // 1 hour
+};
+```
+ 
+## 3. Authorization Patterns
+### Role-Based Access Control
+```typescript
+// Good implementation
+class ResourceController {
+  @RequiresPermission('resource:read')
+  async getResource(userId: string, resourceId: string): Promise<Resource> {
+    const userRole = await this.roleService.getUserRole(userId);
+    if (!this.permissionService.canAccessResource(userRole, resourceId)) {
+      throw new UnauthorizedError('Insufficient permissions');
+    }
+    return this.resourceRepository.findById(resourceId);
+  }
+}
+```
+ 
+### Principle of Least Privilege
+```typescript
+// Design pattern for minimal privilege
+interface ServiceAccount {
+  readonly permissions: Set<Permission>;
+  canAccess(resource: Resource): boolean;
+  elevateTemporary(context: AuditContext): ElevatedPermission;
+}
+```
+ 
+## 4. Secure Data Storage
+### Encryption Implementation
+```typescript
+// Good pattern for data encryption
+class SecureDataStore {
+  private readonly keyManager: KeyManager;
+ 
+  async store(data: sensitive): Promise<void> {
+    const encryptionKey = await this.keyManager.getLatestKey();
+    const encrypted = await this.encrypt(data, encryptionKey);
+    await this.persistEncrypted(encrypted);
+  }
+ 
+  private async encrypt(data: Sensitive, key: Key): Promise<Encrypted> {
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    // ... implementation
+  }
+}
+```
+ 
+## 5. Secure Communication
+### API Security
+```typescript
+// Good pattern for API endpoints
+class SecureApiEndpoint {
+  @RateLimit({
+    window: '15m',
+    max: 100
+  })
+  @ValidateInput(schema)
+  async handleRequest(request: Request): Promise<Response> {
+    try {
+      const sanitizedInput = this.sanitizer.sanitize(request.body);
+      const result = await this.processRequest(sanitizedInput);
+      return this.sanitizer.sanitizeResponse(result);
+    } catch (error) {
+      this.handleError(error); // Secure error handling
+    }
+  }
+}
+```
+ 
+## 6. Error Handling and Logging
+### Secure Error Handling
+```typescript
+// Good pattern for error handling
+class ErrorHandler {
+  handleError(error: Error, context: RequestContext): SafeResponse {
+    // Log full error internally
+    this.logger.error(error, context);
+   
+    // Return safe error to client
+    return {
+      errorCode: this.mapErrorCode(error),
+      message: this.getSafeMessage(error),
+      requestId: context.requestId
+    };
+  }
+}
+```
+ 
+## 7. Code Design Patterns for Security
+ 
+### Builder Pattern with Validation
+```typescript
+class SecureRequestBuilder {
+  private headers: Headers = new Headers();
+  private payload?: object;
+  private validation: ValidationRules = {};
+ 
+  withAuthentication(token: string): this {
+    this.headers.set('Authorization', `Bearer ${token}`);
+    return this;
+  }
+ 
+  withPayload(payload: object, validation: ValidationRules): this {
+    this.payload = payload;
+    this.validation = validation;
+    return this;
+  }
+ 
+  async build(): Promise<SecureRequest> {
+    // Validate all components before creating request
+    await this.validateAll();
+    return new SecureRequest(this.headers, this.payload);
+  }
+}
+```
+ 
+### Factory Pattern for Secure Objects
+```typescript
+class SecureObjectFactory {
+  static createSecureConnection(config: ConnectionConfig): SecureConnection {
+    // Validate configuration
+    validateConfig(config);
+   
+    // Apply security defaults
+    const secureConfig = applySecurityDefaults(config);
+   
+    // Create connection with security measures
+    return new SecureConnection(secureConfig);
+  }
+}
+```
+ 
+## 8. Security-Focused Testing Patterns
+ 
+### Unit Testing Security Features
+```typescript
+describe('UserAuthentication', () => {
+  it('should prevent timing attacks in password comparison', async () => {
+    const auth = new UserAuthentication();
+    const startTime1 = process.hrtime();
+    await auth.verifyPassword('short', 'stored_hash');
+    const endTime1 = process.hrtime();
+   
+    const startTime2 = process.hrtime();
+    await auth.verifyPassword('very_long_password', 'stored_hash');
+    const endTime2 = process.hrtime();
+   
+    // Verify constant-time comparison
+    expect(timeDifference(startTime1, endTime1))
+      .toBeCloseTo(timeDifference(startTime2, endTime2), 1);
+  });
+});
+```
+ 
+## Design Principles to Enforce
+ 
+1. **Immutability**
+   - Use readonly properties
+   - Return copies instead of references
+   - Freeze objects where appropriate
+ 
+2. **Encapsulation**
+   - Hide security-critical implementations
+   - Expose minimal interfaces
+   - Use private fields and methods
+ 
+3. **Validation Chains**
+   - Validate at every layer
+   - Use composition for complex validation
+   - Maintain validation context
+ 
+4. **Secure Defaults**
+   - Always default to most secure option
+   - Require explicit opt-out of security features
+   - Document security implications
+ 
+When guiding an LLM to generate code, you should:
+ 
+1. **Explicit Security Requirements**
+   - Specify required security features
+   - Define validation requirements
+   - Set error handling expectations
+ 
+2. **Pattern Recognition**
+   - Provide examples of secure patterns
+   - Highlight anti-patterns to avoid
+   - Show security-focused refactoring
+ 
+3. **Context Awareness**
+   - Specify security context
+   - Define trust boundaries
+   - Identify sensitive data flows
+ 
+Would you like me to elaborate on any of these aspects or provide more specific examples for certain security patterns?
