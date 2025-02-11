@@ -25,3 +25,20 @@ def test_assign_claim_to_adjuster():
     assert claim_under_test["closed"] == True
 
 
+def test_select_payment_method_with_invalid_payment_type():
+    response = _request("POST", "payment_methods", {"payment_type": "invalid"})
+    assert response.status_code == 400
+
+
+def test_select_payment_method_with_invalid_user_id():
+    response = _request("POST", "payment_methods", {"user_id": "invalid"})
+    assert response.status_code == 400
+
+
+def test_select_payment_method():
+    response = _request("POST", "payment_methods", {"payment_type": "5.50","user_id": "5.50"})
+    assert response.status_code == 201
+    assert response.json()["payment_method_uuid"] is not None    payment_methods = response.json()["payment_methods"]
+    assert payment_method_under_test["closed"] == True
+
+

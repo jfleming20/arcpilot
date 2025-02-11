@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "outbox",
     "django_celery_beat",
     "claims",
+    "payment_methods",
     "django_outbox_pattern"
 ]
 
@@ -140,6 +141,7 @@ APPEND_SLASH = False
 JAIMINHO_CONFIG = {
     "PERSIST_ALL_EVENTS": False,
     "DELETE_AFTER_SEND": True,
+    "PUBLISH_STRATEGY": "publish-on-commit",
     "DEFAULT_ENCODER": DjangoJSONEncoder
 }
 
@@ -155,6 +157,7 @@ CELERY_BEAT_SCHEDULE = {
     },
     "add-every-30-seconds": {
         "task": "leads.tasks.publish_outbox_messages",
+        "task": "payment_methods.tasks.publish_outbox_messages",
         "schedule": 30.0
     }
 }
@@ -170,7 +173,8 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
-        "console": {
+        "console": {  # You can adjust the level here
+            "class": "logging.StreamHandler",
             "level": "DEBUG"
         }
     },
